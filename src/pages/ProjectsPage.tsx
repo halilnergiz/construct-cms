@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { Plus, Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, ScanEye } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
 import type { Project } from '@/types/project';
@@ -49,20 +49,21 @@ export default function ProjectsPage() {
     setDeletingId(id);
     const project = projects.find((p) => p.id === id);
 
+    const paths = new Set<string>();
     if (project?.cover_image) {
-      const path = extractStoragePath(project.cover_image);
-      if (path) {
-        await supabase.storage.from('project-images').remove([path]);
-      }
+      const coverPath = extractStoragePath(project.cover_image);
+      if (coverPath) paths.add(coverPath);
     }
 
     if (project?.images?.length) {
-      const paths = project.images
+      project.images
         .map(extractStoragePath)
-        .filter(Boolean) as string[];
-      if (paths.length) {
-        await supabase.storage.from('project-images').remove(paths);
-      }
+        .filter(Boolean)
+        .forEach((path) => paths.add(path as string));
+    }
+
+    if (paths.size > 0) {
+      await supabase.storage.from('project-images').remove([...paths]);
     }
 
     const { error } = await supabase.from('projects').delete().eq('id', id);
@@ -181,10 +182,18 @@ export default function ProjectsPage() {
                     </span>
                   </td>
                   <td className='px-6 py-4'>
-                    <div className='flex items-center justify-end gap-2'>
+                    <div className='flex items-center justify-end gap-1'>
+                      <Link
+                        to={`/projects/${project.id}`}
+                        className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-sky-50 hover:text-sky-600'
+                        title='Görüntüle'
+                      >
+                        <ScanEye className='h-4 w-4' />
+                      </Link>
                       <Link
                         to={`/projects/${project.id}/edit`}
                         className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700'
+                        title='Düzenle'
                       >
                         <Pencil className='h-4 w-4' />
                       </Link>
@@ -192,6 +201,7 @@ export default function ProjectsPage() {
                         onClick={() => handleDelete(project.id)}
                         disabled={deletingId === project.id}
                         className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50'
+                        title='Sil'
                       >
                         <Trash2 className='h-4 w-4' />
                       </button>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import {
+  CircleUserRound,
   LayoutDashboard,
   FolderKanban,
   LogOut,
@@ -14,6 +15,8 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/projects', label: 'Projeler', icon: FolderKanban },
 ]
+
+const profileNavItem = { to: '/profile', label: 'Profil', icon: CircleUserRound }
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -45,7 +48,10 @@ export default function Layout() {
 
         <nav className="flex-1 space-y-1 px-3 py-4">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.to
+            const isActive =
+              item.to === '/projects'
+                ? location.pathname.startsWith('/projects')
+                : location.pathname === item.to
             return (
               <Link
                 key={item.to}
@@ -65,9 +71,18 @@ export default function Layout() {
         </nav>
 
         <div className="border-t border-slate-700 p-4">
-          <div className="mb-3 truncate text-xs text-slate-400">
-            {user?.email}
-          </div>
+          <Link
+            to={profileNavItem.to}
+            onClick={() => setSidebarOpen(false)}
+            className={`mb-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+              location.pathname === profileNavItem.to
+                ? 'bg-slate-800 text-white'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <profileNavItem.icon className="h-4 w-4" />
+            {profileNavItem.label}
+          </Link>
           <button
             onClick={handleSignOut}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
@@ -75,11 +90,15 @@ export default function Layout() {
             <LogOut className="h-4 w-4" />
             Çıkış Yap
           </button>
+          <div className="mt-3 ml-3 truncate text-xs text-slate-400">
+            {user?.email}
+          </div>
         </div>
       </aside>
 
+      {/* // TODO: Header ve sayfa başlıkları aynı oluyor, header'a veya sayfalardaki başlıklara gerek yok */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 items-center gap-4 border-b border-slate-200 bg-white px-6">
+        <header className="flex h-16 items-center gap-4 border-b border-slate-200 bg-white px-6"> 
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-slate-600 lg:hidden"
@@ -87,7 +106,7 @@ export default function Layout() {
             {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
           <h1 className="text-lg font-semibold text-slate-800">
-            {navItems.find((i) => i.to === location.pathname)?.label ?? 'Construct CMS'}
+            {([...navItems, profileNavItem].find((i) => i.to === location.pathname)?.label ?? 'Construct CMS')}
           </h1>
         </header>
 

@@ -1,3 +1,11 @@
+export interface ProjectLocation {
+  city: string | null
+  district: string | null
+  address: string | null
+  latitude: number | null
+  longitude: number | null
+}
+
 export interface Project {
   id: string
   title: string
@@ -7,6 +15,7 @@ export interface Project {
   cover_image: string | null
   images: string[]
   category: string | null
+  location?: ProjectLocation | null
   status: 'draft' | 'published'
   featured: boolean
   created_at: string

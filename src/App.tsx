@@ -1,7 +1,15 @@
 import { BrowserRouter, Routes, Route } from 'react-router'
 
 import { Layout, ProtectedRoute, AuthCallback } from '@/components'
-import { LoginPage, SetPasswordPage, DashboardPage, ProjectsPage, ProjectFormPage } from '@/pages'
+import {
+  DashboardPage,
+  LoginPage,
+  ProfilePage,
+  ProjectFormPage,
+  ProjectPreviewPage,
+  ProjectsPage,
+  SetPasswordPage,
+} from '@/pages'
 
 export default function App() {
   return (
@@ -15,7 +23,9 @@ export default function App() {
             <Route index element={<DashboardPage />} />
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="projects/new" element={<ProjectFormPage />} />
+            <Route path="projects/:id" element={<ProjectPreviewPage />} />
             <Route path="projects/:id/edit" element={<ProjectFormPage />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
         </Route>
       </Routes>

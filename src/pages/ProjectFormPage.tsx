@@ -7,14 +7,14 @@ import { supabase } from '@/lib/supabase'
 import ImageUploader from '@/components/ImageUploader'
 import type { ProjectInsert } from '@/types/project'
 
-type FormData = Omit<ProjectInsert, 'images'>
+type FormData = Omit<ProjectInsert, 'images' | 'cover_image'>
 
 export default function ProjectFormPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const isEditing = Boolean(id)
 
-  const [coverImage, setCoverImage] = useState<string | null>(null)
+  const [images, setImages] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [loadingProject, setLoadingProject] = useState(isEditing)
 
@@ -31,7 +31,6 @@ export default function ProjectFormPage() {
       content: '',
       category: '',
       status: 'draft',
-      cover_image: null,
     },
   })
 
@@ -52,7 +51,16 @@ export default function ProjectFormPage() {
         setValue('content', data.content ?? '')
         setValue('category', data.category ?? '')
         setValue('status', data.status)
-        setCoverImage(data.cover_image)
+        const loadedImages = Array.isArray(data.images)
+          ? data.images.filter((img: unknown): img is string => typeof img === 'string')
+          : []
+        if (loadedImages.length > 0) {
+          setImages(loadedImages)
+        } else if (data.cover_image) {
+          setImages([data.cover_image])
+        } else {
+          setImages([])
+        }
       }
       setLoadingProject(false)
     }
@@ -77,8 +85,8 @@ export default function ProjectFormPage() {
 
     const payload = {
       ...data,
-      cover_image: coverImage,
-      images: [],
+      cover_image: images[0] ?? null,
+      images,
     }
 
     if (isEditing) {
@@ -106,6 +114,7 @@ export default function ProjectFormPage() {
   }
 
   return (
+    // TODO: Padding ve margin ayarları tüm sayfalarda standart hale getirilecek. 
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
         <button
@@ -201,9 +210,9 @@ export default function ProjectFormPage() {
 
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
-            Kapak Görseli
+            Proje Görselleri
           </h3>
-          <ImageUploader value={coverImage} onChange={setCoverImage} />
+          <ImageUploader values={images} onChange={setImages} />
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
