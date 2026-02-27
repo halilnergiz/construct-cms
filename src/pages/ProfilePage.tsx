@@ -5,7 +5,7 @@ import AvatarCropperModal from '@/components/AvatarCropperModal'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 
-const DEFAULT_AVATAR = '/vite.svg'
+const DEFAULT_AVATAR = 'default-logo.png'
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -72,7 +72,7 @@ export default function ProfilePage() {
       await supabase.storage.from('project-images').remove([oldPath])
     }
 
-    setAvatarMessage('Profil fotoğrafı güncellendi.')
+    setAvatarMessage('Firma logosu güncellendi.')
     setAvatarUploading(false)
   }
 
@@ -100,7 +100,7 @@ export default function ProfilePage() {
       await supabase.storage.from('project-images').remove([oldPath])
     }
 
-    setAvatarMessage('Profil fotoğrafı varsayılan logoya döndürüldü.')
+    setAvatarMessage('Firma logosu varsayılan logoya döndürüldü.')
     setAvatarUploading(false)
   }
 
@@ -153,19 +153,19 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900">Profil</h2>
+        <h2 className="text-2xl font-bold text-slate-900">Firma Profili</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Profil fotoğrafı ve şifre ayarlarınızı yönetin.
+          Firma logosu ve şifre ayarlarınızı yönetin.
         </p>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
-          Profil Fotoğrafı
+          Firma Logosu
         </h3>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <div className="relative h-20 w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-50">
-            <img src={avatarUrl} alt="Profil fotoğrafı" className="h-full w-full object-cover" />
+            <img src={avatarUrl} alt="Firma logosu" className="h-full w-full object-cover" />
             {avatarUploading && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/35">
                 <Loader2 className="h-5 w-5 animate-spin text-white" />
@@ -180,7 +180,7 @@ export default function ProfilePage() {
               ) : (
                 <Upload className="h-4 w-4" />
               )}
-              Fotoğraf Yükle
+              Logo Yükle
               <input
                 type="file"
                 accept="image/*"
@@ -310,7 +310,7 @@ export default function ProfilePage() {
           </form>
         ) : (
           <p className="text-sm text-slate-500">
-            Şifre yenileme formunu görmek için <strong>Şifre Yenile</strong> sekmesine geçin.
+            Şifre yenilemek için <strong>Şifre Yenile</strong> sekmesine geçiniz.
           </p>
         )}
       </div>

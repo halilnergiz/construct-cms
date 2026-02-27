@@ -96,19 +96,15 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* // TODO: Header ve sayfa başlıkları aynı oluyor, header'a veya sayfalardaki başlıklara gerek yok */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 items-center gap-4 border-b border-slate-200 bg-white px-6"> 
+        <div className="border-b border-slate-200 bg-white px-6 py-3 lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-slate-600 lg:hidden"
           >
             {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
-          <h1 className="text-lg font-semibold text-slate-800">
-            {([...navItems, profileNavItem].find((i) => i.to === location.pathname)?.label ?? 'Construct CMS')}
-          </h1>
-        </header>
+        </div>
 
         <main className="flex-1 overflow-y-auto p-6">
           <Outlet />

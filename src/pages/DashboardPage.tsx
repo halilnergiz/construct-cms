@@ -55,14 +55,14 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
           <p className="mt-1 text-sm text-slate-500">Projelerin genel durumu</p>
         </div>
         <Link
           to="/projects/new"
-          className="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+          className="flex items-center gap-2 self-start rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
         >
           <Plus className="h-4 w-4" />
           Yeni Proje
