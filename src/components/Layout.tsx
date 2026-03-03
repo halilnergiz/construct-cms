@@ -22,6 +22,16 @@ export default function Layout() {
   const { user, signOut } = useAuth()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const sidebarCompanyName =
+    typeof user?.user_metadata?.company_name === 'string' &&
+    user.user_metadata.company_name.trim().length > 0
+      ? user.user_metadata.company_name.trim()
+      : 'Firma İsmi'
+  const sidebarLogoUrl =
+    typeof user?.user_metadata?.avatar_url === 'string' &&
+    user.user_metadata.avatar_url.length > 0
+      ? user.user_metadata.avatar_url
+      : null
 
   const handleSignOut = async () => {
     await signOut()
@@ -41,9 +51,31 @@ export default function Layout() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex h-16 items-center gap-2 border-b border-slate-700 px-6">
-          <FolderKanban className="h-6 w-6 text-sky-400" />
-          <span className="text-lg font-bold tracking-tight">Construct CMS</span>
+        <div className="border-b border-slate-700 px-4 py-4">
+          <div className="flex items-center gap-3">
+            {sidebarLogoUrl ? (
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-700 bg-white/5">
+                <img
+                  src={sidebarLogoUrl}
+                  alt="Firma logosu"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            ) : (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-500 text-xs font-medium tracking-tight text-slate-300">
+                Logo
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p
+                className="mt-1 overflow-hidden text-lg font-semibold leading-5 text-slate-100"
+                style={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' }}
+                title={sidebarCompanyName}
+              >
+                {sidebarCompanyName}
+              </p>
+            </div>
+          </div>
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-4">
