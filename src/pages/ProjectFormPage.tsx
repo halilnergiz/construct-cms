@@ -31,6 +31,7 @@ export default function ProjectFormPage() {
       content: '',
       category: '',
       status: 'draft',
+      featured: false,
     },
   })
 
@@ -51,6 +52,7 @@ export default function ProjectFormPage() {
         setValue('content', data.content ?? '')
         setValue('category', data.category ?? '')
         setValue('status', data.status)
+        setValue('featured', Boolean(data.featured))
         const loadedImages = Array.isArray(data.images)
           ? data.images.filter((img: unknown): img is string => typeof img === 'string')
           : []
