@@ -1,6 +1,6 @@
 export { default as DashboardPage } from './DashboardPage'
 export { default as LoginPage } from './LoginPage'
-export { default as SetPasswordPage } from './SetPasswordPage'
+export { default as AccountSetupPage } from './AccountSetupPage'
 export { default as ProjectsPage } from './ProjectsPage'
 export { default as ProjectFormPage } from './ProjectFormPage'
 export { default as ProjectPreviewPage } from './ProjectPreviewPage'
