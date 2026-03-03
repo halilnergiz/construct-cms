@@ -13,6 +13,7 @@ const PASSWORD_RULES = [
   { key: 'number', label: 'Bir rakam (0-9)', test: (p: string) => /[0-9]/.test(p) },
 ];
 const DEFAULT_AVATAR = 'default-logo.png';
+const COMPANY_NAME_MAX_LENGTH = 120;
 
 export default function AccountSetupPage() {
   const navigate = useNavigate();
@@ -148,6 +149,10 @@ export default function AccountSetupPage() {
       setError('Lütfen şirket adını girin');
       return;
     }
+    if (trimmedCompanyName.length > COMPANY_NAME_MAX_LENGTH) {
+      setError(`Şirket ismi en fazla ${COMPANY_NAME_MAX_LENGTH} karakter olabilir`);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -233,6 +238,7 @@ export default function AccountSetupPage() {
               id="company-name"
               type="text"
               required
+              maxLength={COMPANY_NAME_MAX_LENGTH}
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"

@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 
 const DEFAULT_AVATAR = 'default-logo.png'
+const COMPANY_NAME_MAX_LENGTH = 120
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -221,6 +222,10 @@ export default function ProfilePage() {
       setCompanyMessage('Firma ismi boş bırakılamaz.')
       return
     }
+    if (trimmedCompanyName.length > COMPANY_NAME_MAX_LENGTH) {
+      setCompanyMessage(`Firma ismi en fazla ${COMPANY_NAME_MAX_LENGTH} karakter olabilir.`)
+      return
+    }
     if (!confirm('Firma ismini güncellemek istediğinize emin misiniz?')) {
       return
     }
@@ -391,6 +396,7 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     value={companyDraftName}
+                    maxLength={COMPANY_NAME_MAX_LENGTH}
                     onChange={(e) => setCompanyDraftName(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
                     placeholder="Firma adını girin"
