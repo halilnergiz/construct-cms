@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router'
-import { ArrowLeft, Pencil, Eye, EyeOff, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Eye, EyeOff, Trash2, MapPin, X } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
 import type { Project } from '@/types/project'
@@ -11,6 +11,9 @@ export default function ProjectPreviewPage() {
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const [activeImage, setActiveImage] = useState<string | null>(null)
+  const [thumbnailPage, setThumbnailPage] = useState(0)
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -29,6 +32,48 @@ export default function ProjectPreviewPage() {
     }
     fetchProject()
   }, [id])
+
+  useEffect(() => {
+    if (!project) return
+    const firstImage = project.cover_image ?? project.images?.[0] ?? null
+    setActiveImage(firstImage)
+    setThumbnailPage(0)
+  }, [project])
+
+  const allImages = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [project?.cover_image, ...(project?.images ?? [])].filter(
+            (img): img is string => Boolean(img)
+          )
+        )
+      ),
+    [project?.cover_image, project?.images]
+  )
+
+  useEffect(() => {
+    if (!activeImage || allImages.length === 0) return
+    const activeImageIndex = allImages.indexOf(activeImage)
+    if (activeImageIndex < 0) return
+    const nextPage = Math.floor(activeImageIndex / 5)
+    setThumbnailPage((currentPage) =>
+      currentPage === nextPage ? currentPage : nextPage
+    )
+  }, [activeImage, allImages])
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setFullscreenImage(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeydown)
+    return () => {
+      window.removeEventListener('keydown', handleKeydown)
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -52,10 +97,23 @@ export default function ProjectPreviewPage() {
     )
   }
 
-  const galleryImages =
-    project.images?.filter((img, index) =>
-      project.cover_image ? img !== project.cover_image || index !== 0 : true
-    ) ?? []
+  const thumbnailsPerPage = 5
+  const totalThumbnailPages = Math.ceil(allImages.length / thumbnailsPerPage)
+  const thumbnailStartIndex = thumbnailPage * thumbnailsPerPage
+  const visibleThumbnails = allImages.slice(
+    thumbnailStartIndex,
+    thumbnailStartIndex + thumbnailsPerPage
+  )
+
+  const hasCoordinates =
+    project.location?.latitude !== null &&
+    project.location?.latitude !== undefined &&
+    project.location?.longitude !== null &&
+    project.location?.longitude !== undefined
+
+  const mapUrl = hasCoordinates
+    ? `https://maps.google.com/maps?q=${project.location?.latitude},${project.location?.longitude}&z=14&output=embed`
+    : null
 
   const handleDelete = async () => {
     if (!confirm('Bu projeyi silmek istediğinize emin misiniz?')) return
@@ -136,71 +194,144 @@ export default function ProjectPreviewPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl rounded-xl border border-slate-200 bg-white px-6 py-12 shadow-sm sm:px-10">
-          {project.category && (
-            <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-wider text-sky-600">
-              {project.category}
-            </span>
-          )}
-
-          <h1 className="mb-4 text-4xl font-bold text-gray-900">
-            {project.title}
-          </h1>
-
-          {project.description && (
-            <p className="mb-8 text-xl text-gray-500">{project.description}</p>
-          )}
-
-          {project.cover_image && (
-            <div className="mb-10 overflow-hidden rounded-xl">
-              <img
-                src={project.cover_image}
-                alt={project.title}
-                className="aspect-video w-full object-cover"
-              />
-            </div>
-          )}
-
-          {project.content && (
-            <div className="prose prose-lg prose-gray max-w-none">
-              {project.content.split('\n').map((paragraph, i) =>
-                paragraph.trim() ? (
-                  <p key={i} className="text-gray-600 leading-relaxed">
-                    {paragraph}
-                  </p>
-                ) : (
-                  <br key={i} />
-                )
+      <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-xl shadow-slate-200/50 backdrop-blur sm:p-6">
+        <div className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
+          <section className="space-y-4">
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+              {activeImage ? (
+                <img
+                  src={activeImage}
+                  alt={project.title}
+                  className="aspect-video w-full object-cover"
+                  onDoubleClick={() => setFullscreenImage(activeImage)}
+                />
+              ) : (
+                <div className="flex aspect-video items-center justify-center text-sm font-medium text-slate-500">
+                  Görsel bulunamadı
+                </div>
               )}
-            </div>
-          )}
-
-          {galleryImages.length > 0 && (
-            <div className="mt-12">
-              <h2 className="mb-6 text-2xl font-semibold text-gray-800">
-                Galeri
-              </h2>
-              <div className="grid grid-cols-2 gap-4">
-                {galleryImages.map((img, i) => (
-                  <div
-                    key={i}
-                    className="overflow-hidden rounded-lg"
-                  >
-                    <img
-                      src={img}
-                      alt={`${project.title} - Görsel ${i + 1}`}
-                      className="aspect-video w-full object-cover"
-                    />
-                  </div>
-                ))}
+              <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-slate-900/65 via-slate-900/10 to-transparent" />
+              <span
+                className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+                  project.featured
+                    ? 'bg-amber-100/95 text-amber-800'
+                    : 'bg-slate-100/95 text-slate-700'
+                }`}
+              >
+                {project.featured ? 'Öne Çıkan' : 'Standart'}
+              </span>
+              <div className="absolute inset-x-4 bottom-4 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h1 className="text-3xl font-semibold text-white drop-shadow-sm">
+                    {project.title}
+                  </h1>
+                  <p className="mt-1 flex items-center gap-2 text-sm text-slate-100">
+                    <MapPin className="h-4 w-4" />
+                    {formatLocation(project)}
+                  </p>
+                </div>
+                {project.category && (
+                  <span className="rounded-full bg-slate-100/95 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
+                    {project.category}
+                  </span>
+                )}
               </div>
             </div>
-          )}
+
+            {allImages.length > 0 && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-5 gap-2">
+                  {visibleThumbnails.map((img, i) => (
+                    <button
+                      type="button"
+                      key={`${img}-${thumbnailStartIndex + i}`}
+                      onClick={() => setActiveImage(img)}
+                      className={`overflow-hidden rounded-xl border transition ${
+                        activeImage === img
+                          ? 'border-slate-900 ring-2 ring-slate-900/15'
+                          : 'border-slate-200 hover:border-slate-400'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`${project.title} - Görsel ${thumbnailStartIndex + i + 1}`}
+                        className="aspect-16/10 w-full object-cover"
+                        onDoubleClick={() => setFullscreenImage(img)}
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                {totalThumbnailPages > 1 && (
+                  <div className="flex items-center justify-center gap-2">
+                    {Array.from({ length: totalThumbnailPages }, (_, pageIndex) => (
+                      <button
+                        type="button"
+                        key={`thumb-page-${pageIndex}`}
+                        onClick={() => setThumbnailPage(pageIndex)}
+                        aria-label={`Galeri sayfası ${pageIndex + 1}`}
+                        className={`h-2.5 w-2.5 rounded-full transition ${
+                          pageIndex === thumbnailPage
+                            ? 'bg-slate-900'
+                            : 'bg-slate-300 hover:bg-slate-400'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          <aside className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    {project.title}
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {project.description ?? 'Açıklama eklenmemiş.'}
+                  </p>
+                </div>
+                <div className="border-t border-slate-200 pt-3">
+                  {project.content ? (
+                    <div className="max-h-[230px] space-y-2 overflow-y-auto pr-1 text-sm text-slate-600">
+                      {project.content.split('\n').map((line, i) =>
+                        line.trim() ? <p key={i}>{line}</p> : <div key={i} className="h-2" />
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">İçerik eklenmemiş.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  {mapUrl ? (
+                    <iframe
+                      title="project-location-map"
+                      src={mapUrl}
+                      className="h-48 w-full"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                  ) : (
+                    <div className="flex h-48 items-center justify-center p-4 text-sm text-slate-500">
+                      Harita için konum koordinatı bulunmuyor
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Proje Bilgileri
+          Proje Detayları
         </h3>
         <dl className="grid gap-3 text-sm sm:grid-cols-3">
           <div>
@@ -221,6 +352,28 @@ export default function ProjectPreviewPage() {
           </div>
         </dl>
       </div>
+
+      {fullscreenImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setFullscreenImage(null)}
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+            aria-label="Tam ekran görseli kapat"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <img
+            src={fullscreenImage}
+            alt={`${project.title} tam ekran`}
+            className="max-h-[92vh] w-auto max-w-[96vw] rounded-lg object-contain"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -237,6 +390,15 @@ function formatDateTime(value: string): string {
     minute: '2-digit',
   })
   return `${datePart} Saat ${timePart}`
+}
+
+function formatLocation(project: Project): string {
+  const city = project.location?.city?.trim()
+  const district = project.location?.district?.trim()
+  if (district && city) return `${district}, ${city}`
+  if (district) return district
+  if (city) return city
+  return 'Lokasyon belirtilmemiş'
 }
 
 function extractStoragePath(url: string): string | null {
