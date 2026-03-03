@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
-import { KeyRound, Loader2, ShieldCheck, Upload, UserCircle2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { KeyRound, Loader2, Pencil, ShieldCheck, UserCircle2, X } from 'lucide-react'
 
-import AvatarCropperModal from '@/components/AvatarCropperModal'
+import CompanyLogoUploader from '@/components/CompanyLogoUploader'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 
@@ -15,10 +15,13 @@ export default function ProfilePage() {
   const [oldPassword, setOldPassword] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [companyDraftName, setCompanyDraftName] = useState('')
+  const [editingCompanyName, setEditingCompanyName] = useState(false)
+  const [companySaving, setCompanySaving] = useState(false)
+  const [companyMessage, setCompanyMessage] = useState<string | null>(null)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const [avatarMessage, setAvatarMessage] = useState<string | null>(null)
-  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null)
-  const [cropperOpen, setCropperOpen] = useState(false)
 
   const avatarUrl = useMemo(() => {
     const candidate = user?.user_metadata?.avatar_url
@@ -26,6 +29,40 @@ export default function ProfilePage() {
       ? candidate
       : DEFAULT_AVATAR
   }, [user?.user_metadata])
+
+  useEffect(() => {
+    if (!user) return
+    let ignore = false
+
+    const metadataCompanyName = user.user_metadata?.company_name
+    if (typeof metadataCompanyName === 'string' && metadataCompanyName.length > 0) {
+      setCompanyName(metadataCompanyName)
+      setCompanyDraftName(metadataCompanyName)
+    } else {
+      setCompanyName('')
+      setCompanyDraftName('')
+    }
+
+    const loadProfile = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('company_name')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (ignore || error || !data) return
+      if (typeof data.company_name === 'string') {
+        setCompanyName(data.company_name)
+        setCompanyDraftName(data.company_name)
+      }
+    }
+
+    void loadProfile()
+
+    return () => {
+      ignore = true
+    }
+  }, [user])
 
   const handleAvatarUpload = async (file: Blob) => {
     if (!user) return
@@ -65,6 +102,16 @@ export default function ProfilePage() {
       return
     }
 
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ logo_url: publicUrl })
+      .eq('id', user.id)
+    if (profileError) {
+      setAvatarMessage(profileError.message)
+      setAvatarUploading(false)
+      return
+    }
+
     const oldPath = extractStoragePath(
       typeof oldAvatar === 'string' ? oldAvatar : null
     )
@@ -89,6 +136,16 @@ export default function ProfilePage() {
 
     if (error) {
       setAvatarMessage(error.message)
+      setAvatarUploading(false)
+      return
+    }
+
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ logo_url: null })
+      .eq('id', user.id)
+    if (profileError) {
+      setAvatarMessage(profileError.message)
       setAvatarUploading(false)
       return
     }
@@ -150,6 +207,58 @@ export default function ProfilePage() {
     setPasswordSaving(false)
   }
 
+  const handleCompanySubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setCompanyMessage(null)
+
+    if (!user) {
+      setCompanyMessage('Kullanıcı oturumu bulunamadı.')
+      return
+    }
+
+    const trimmedCompanyName = companyDraftName.trim()
+    if (!trimmedCompanyName) {
+      setCompanyMessage('Firma ismi boş bırakılamaz.')
+      return
+    }
+    if (!confirm('Firma ismini güncellemek istediğinize emin misiniz?')) {
+      return
+    }
+
+    setCompanySaving(true)
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      data: { company_name: trimmedCompanyName },
+    })
+    if (updateError) {
+      setCompanyMessage(updateError.message)
+      setCompanySaving(false)
+      return
+    }
+
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: user.id,
+          company_name: trimmedCompanyName,
+        },
+        { onConflict: 'id' }
+      )
+
+    if (profileError) {
+      setCompanyMessage(profileError.message)
+      setCompanySaving(false)
+      return
+    }
+
+    setCompanyName(trimmedCompanyName)
+    setCompanyDraftName(trimmedCompanyName)
+    setEditingCompanyName(false)
+    setCompanyMessage('Firma ismi güncellendi.')
+    setCompanySaving(false)
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
@@ -163,51 +272,14 @@ export default function ProfilePage() {
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
           Firma Logosu
         </h3>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="relative h-20 w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-50">
-            <img src={avatarUrl} alt="Firma logosu" className="h-full w-full object-cover" />
-            {avatarUploading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/35">
-                <Loader2 className="h-5 w-5 animate-spin text-white" />
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
-              {avatarUploading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="h-4 w-4" />
-              )}
-              Logo Yükle
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    setSelectedAvatarFile(file)
-                    setCropperOpen(true)
-                    e.target.value = ''
-                  }
-                }}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => void handleAvatarReset()}
-              disabled={avatarUploading}
-              className="ml-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
-            >
-              Varsayılan Logoya Dön
-            </button>
-            {avatarMessage && (
-              <p className="text-xs text-slate-500">{avatarMessage}</p>
-            )}
-          </div>
-        </div>
+        <CompanyLogoUploader
+          logoUrl={avatarUrl}
+          uploading={avatarUploading}
+          message={avatarMessage}
+          onUpload={handleAvatarUpload}
+          onReset={handleAvatarReset}
+          showResetButton
+        />
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -309,25 +381,75 @@ export default function ProfilePage() {
             </button>
           </form>
         ) : (
-          <p className="text-sm text-slate-500">
-            Şifre yenilemek için <strong>Şifre Yenile</strong> sekmesine geçiniz.
-          </p>
+          <form onSubmit={handleCompanySubmit} className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                Firma İsmi
+              </label>
+              {editingCompanyName ? (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={companyDraftName}
+                    onChange={(e) => setCompanyDraftName(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                    placeholder="Firma adını girin"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="submit"
+                      disabled={companySaving}
+                      className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
+                    >
+                      {companySaving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <UserCircle2 className="h-4 w-4" />
+                      )}
+                      Kaydet
+                    </button>
+                    <button
+                      type="button"
+                      disabled={companySaving}
+                      onClick={() => {
+                        setCompanyDraftName(companyName)
+                        setEditingCompanyName(false)
+                        setCompanyMessage(null)
+                      }}
+                      className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
+                    >
+                      <X className="h-4 w-4" />
+                      Vazgeç
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5">
+                  <p className="text-sm font-medium text-slate-800">
+                    <b className="text-slate-600 text-md">{companyName.trim() || '-'}</b>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCompanyDraftName(companyName)
+                      setEditingCompanyName(true)
+                      setCompanyMessage(null)
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Düzenle
+                  </button>
+                </div>
+              )}
+            </div>
+            {companyMessage && (
+              <p className="text-sm text-slate-600">{companyMessage}</p>
+            )}
+          </form>
         )}
       </div>
 
-      <AvatarCropperModal
-        file={selectedAvatarFile}
-        open={cropperOpen}
-        onClose={() => {
-          setCropperOpen(false)
-          setSelectedAvatarFile(null)
-        }}
-        onConfirm={async (blob) => {
-          setCropperOpen(false)
-          setSelectedAvatarFile(null)
-          await handleAvatarUpload(blob)
-        }}
-      />
     </div>
   )
 }
