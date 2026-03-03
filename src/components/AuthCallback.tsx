@@ -27,7 +27,7 @@ export default function AuthCallback() {
         PASSWORD_SETUP_TYPES.has(authType ?? '')
 
       if (needsPasswordSetup) {
-        navigate('/set-password', { replace: true })
+        navigate('/account-setup', { replace: true })
       } else {
         navigate('/', { replace: true })
       }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { FolderKanban, Loader2, KeyRound, Check, X } from 'lucide-react';
 
+import CompanyLogoUploader from '@/components/CompanyLogoUploader';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -11,12 +12,17 @@ const PASSWORD_RULES = [
   { key: 'lowercase', label: 'Bir küçük harf (a-z)', test: (p: string) => /[a-z]/.test(p) },
   { key: 'number', label: 'Bir rakam (0-9)', test: (p: string) => /[0-9]/.test(p) },
 ];
+const DEFAULT_AVATAR = 'default-logo.png';
 
-export default function SetPasswordPage() {
+export default function AccountSetupPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [logoUrl, setLogoUrl] = useState(DEFAULT_AVATAR);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoMessage, setLogoMessage] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,6 +32,40 @@ export default function SetPasswordPage() {
     }
   }, [user, authLoading, navigate]);
 
+  useEffect(() => {
+    if (!user) return;
+    const currentUser = user;
+
+    async function loadProfile() {
+      const metadataCompanyName = currentUser.user_metadata?.company_name;
+      const metadataAvatarUrl = currentUser.user_metadata?.avatar_url;
+
+      if (typeof metadataCompanyName === 'string') {
+        setCompanyName(metadataCompanyName);
+      }
+      if (typeof metadataAvatarUrl === 'string' && metadataAvatarUrl.length > 0) {
+        setLogoUrl(metadataAvatarUrl);
+      }
+
+      const { data, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_name, logo_url')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+
+      if (profileError || !data) return;
+
+      if (typeof data.company_name === 'string' && data.company_name.length > 0) {
+        setCompanyName(data.company_name);
+      }
+      if (typeof data.logo_url === 'string' && data.logo_url.length > 0) {
+        setLogoUrl(data.logo_url);
+      }
+    }
+
+    void loadProfile();
+  }, [user]);
+
   const ruleResults = useMemo(
     () => PASSWORD_RULES.map((rule) => ({ ...rule, passed: rule.test(password) })),
     [password],
@@ -34,9 +74,64 @@ export default function SetPasswordPage() {
   const allRulesPassed = ruleResults.every((r) => r.passed);
   const passwordsMatch = password === confirmPassword;
 
+  const handleLogoUpload = async (file: Blob) => {
+    if (!user) return;
+    if (!file.type.startsWith('image/')) {
+      setLogoMessage('Lütfen geçerli bir görsel dosyası seçin.');
+      return;
+    }
+
+    setLogoUploading(true);
+    setLogoMessage(null);
+
+    const ext = file.type.split('/')[1] ?? 'jpg';
+    const path = `profiles/${user.id}-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('project-images')
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      setLogoMessage(uploadError.message);
+      setLogoUploading(false);
+      return;
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('project-images').getPublicUrl(path);
+
+    const oldPath = extractStoragePath(logoUrl === DEFAULT_AVATAR ? null : logoUrl);
+    if (oldPath && oldPath.startsWith('profiles/')) {
+      await supabase.storage.from('project-images').remove([oldPath]);
+    }
+
+    setLogoUrl(publicUrl);
+    setLogoMessage('Firma logosu güncellendi.');
+    setLogoUploading(false);
+  };
+
+  const handleLogoReset = async () => {
+    setLogoUploading(true);
+    setLogoMessage(null);
+
+    const oldPath = extractStoragePath(logoUrl === DEFAULT_AVATAR ? null : logoUrl);
+    if (oldPath && oldPath.startsWith('profiles/')) {
+      await supabase.storage.from('project-images').remove([oldPath]);
+    }
+
+    setLogoUrl(DEFAULT_AVATAR);
+    setLogoMessage('Firma logosu varsayılan logoya döndürüldü.');
+    setLogoUploading(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!user) {
+      setError('Kullanıcı oturumu bulunamadı');
+      return;
+    }
 
     if (!allRulesPassed) {
       setError('Şifre gereksinimleri karşılanmıyor');
@@ -48,10 +143,36 @@ export default function SetPasswordPage() {
       return;
     }
 
+    const trimmedCompanyName = companyName.trim();
+    if (!trimmedCompanyName) {
+      setError('Lütfen şirket adını girin');
+      return;
+    }
+
     setLoading(true);
     try {
-      const { error: updateError } = await supabase.auth.updateUser({ password });
+      const persistedLogoUrl = logoUrl === DEFAULT_AVATAR ? null : logoUrl;
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
+        data: {
+          avatar_url: persistedLogoUrl,
+          company_name: trimmedCompanyName,
+        },
+      });
       if (updateError) throw updateError;
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            id: user.id,
+            company_name: trimmedCompanyName,
+            logo_url: persistedLogoUrl,
+          },
+          { onConflict: 'id' },
+        );
+      if (profileError) throw profileError;
+
       navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Şifre belirlenemedi');
@@ -75,9 +196,9 @@ export default function SetPasswordPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900">
             <FolderKanban className="h-7 w-7 text-sky-400" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Şifre Belirle</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Hesap Kurulumu</h1>
           <p className="text-center text-sm text-slate-500">
-            Hesabınız için yeni bir şifre oluşturun
+            Şifrenizi belirleyin ve şirket bilgilerinizi tamamlayın
           </p>
         </div>
 
@@ -105,8 +226,35 @@ export default function SetPasswordPage() {
           </div>
 
           <div>
+            <label htmlFor="company-name" className="mb-1.5 block text-sm font-medium text-slate-700">
+              Şirket İsmi *
+            </label>
+            <input
+              id="company-name"
+              type="text"
+              required
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+              placeholder="Şirket adınızı girin"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Şirket Logosu</label>
+            <CompanyLogoUploader
+              logoUrl={logoUrl}
+              uploading={logoUploading}
+              message={logoMessage}
+              onUpload={handleLogoUpload}
+              onReset={handleLogoReset}
+              showResetButton
+            />
+          </div>
+
+          <div>
             <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700">
-              Yeni Şifre
+              Yeni Şifre *
             </label>
             <input
               id="password"
@@ -156,7 +304,7 @@ export default function SetPasswordPage() {
 
           <button
             type="submit"
-            disabled={loading || !allRulesPassed || !passwordsMatch}
+            disabled={loading || logoUploading || !allRulesPassed || !passwordsMatch}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
           >
             {loading ? (
@@ -170,4 +318,10 @@ export default function SetPasswordPage() {
       </div>
     </div>
   );
+}
+
+function extractStoragePath(url: string | null): string | null {
+  if (!url) return null;
+  const match = url.match(/project-images\/(.+)$/);
+  return match ? match[1] : null;
 }

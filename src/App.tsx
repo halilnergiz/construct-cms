@@ -2,13 +2,13 @@ import { BrowserRouter, Routes, Route } from 'react-router'
 
 import { Layout, ProtectedRoute, AuthCallback } from '@/components'
 import {
+  AccountSetupPage,
   DashboardPage,
   LoginPage,
   ProfilePage,
   ProjectFormPage,
   ProjectPreviewPage,
   ProjectsPage,
-  SetPasswordPage,
 } from '@/pages'
 
 export default function App() {
@@ -17,7 +17,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/set-password" element={<SetPasswordPage />} />
+        <Route path="/account-setup" element={<AccountSetupPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route index element={<DashboardPage />} />
