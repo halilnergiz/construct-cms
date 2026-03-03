@@ -8,18 +8,62 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
+    let active = true
+
+    const syncUserFromServer = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!active) return
+
+      if (!session) {
+        setUser(null)
+        setLoading(false)
+        return
+      }
+
+      const { data, error } = await supabase.auth.getUser()
+
+      if (!active) return
+
+      if (error || !data.user) {
+        setUser(null)
+        await supabase.auth.signOut({ scope: 'local' })
+        setLoading(false)
+        return
+      }
+
+      setUser(data.user)
       setLoading(false)
-    })
+    }
+
+    void syncUserFromServer()
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
+      if (!session) {
+        setUser(null)
+        return
+      }
+
+      void syncUserFromServer()
     })
 
-    return () => subscription.unsubscribe()
+    const handleWindowFocus = () => {
+      void syncUserFromServer()
+    }
+
+    window.addEventListener('focus', handleWindowFocus)
+    document.addEventListener('visibilitychange', handleWindowFocus)
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+      window.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('visibilitychange', handleWindowFocus)
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {
