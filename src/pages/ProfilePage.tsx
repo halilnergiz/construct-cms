@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { KeyRound, Loader2, Pencil, ShieldCheck, UserCircle2, X } from 'lucide-react'
+import { Check, KeyRound, Loader2, Pencil, ShieldCheck, UserCircle2, X } from 'lucide-react'
 
 import CompanyLogoUploader from '@/components/CompanyLogoUploader'
 import { useAuth } from '@/hooks/useAuth'
@@ -7,6 +7,12 @@ import { supabase } from '@/lib/supabase'
 
 const DEFAULT_AVATAR = 'default-logo.png'
 const COMPANY_NAME_MAX_LENGTH = 120
+const PASSWORD_RULES = [
+  { key: 'length', label: 'En az 8 karakter', test: (p: string) => p.length >= 8 },
+  { key: 'uppercase', label: 'Bir büyük harf (A-Z)', test: (p: string) => /[A-Z]/.test(p) },
+  { key: 'lowercase', label: 'Bir küçük harf (a-z)', test: (p: string) => /[a-z]/.test(p) },
+  { key: 'number', label: 'Bir rakam (0-9)', test: (p: string) => /[0-9]/.test(p) },
+]
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -30,6 +36,12 @@ export default function ProfilePage() {
       ? candidate
       : DEFAULT_AVATAR
   }, [user?.user_metadata])
+  const ruleResults = useMemo(
+    () => PASSWORD_RULES.map((rule) => ({ ...rule, passed: rule.test(password) })),
+    [password]
+  )
+  const allRulesPassed = ruleResults.every((rule) => rule.passed)
+  const passwordsMatch = password === confirmPassword
 
   useEffect(() => {
     if (!user) return
@@ -170,11 +182,11 @@ export default function ProfilePage() {
       setPasswordMessage('Lütfen mevcut şifrenizi girin.')
       return
     }
-    if (password.length < 6) {
-      setPasswordMessage('Şifre en az 6 karakter olmalıdır.')
+    if (!allRulesPassed) {
+      setPasswordMessage('Şifre gereksinimleri karşılanmıyor')
       return
     }
-    if (password !== confirmPassword) {
+    if (!passwordsMatch) {
       setPasswordMessage('Şifreler eşleşmiyor.')
       return
     }
@@ -281,6 +293,7 @@ export default function ProfilePage() {
           logoUrl={avatarUrl}
           uploading={avatarUploading}
           message={avatarMessage}
+          messageClassName={getMessageClassName(avatarMessage)}
           onUpload={handleAvatarUpload}
           onReset={handleAvatarReset}
           showResetButton
@@ -336,7 +349,6 @@ export default function ProfilePage() {
               </label>
               <input
                 type="password"
-                minLength={6}
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
@@ -349,32 +361,49 @@ export default function ProfilePage() {
               </label>
               <input
                 type="password"
-                minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
-                placeholder="En az 6 karakter"
+                placeholder="Güçlü bir şifre girin"
               />
             </div>
+            {password.length > 0 && (
+              <ul className="space-y-1.5">
+                {ruleResults.map((rule) => (
+                  <li key={rule.key} className="flex items-center gap-2 text-xs">
+                    {rule.passed ? (
+                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                    ) : (
+                      <X className="h-3.5 w-3.5 shrink-0 text-slate-300" />
+                    )}
+                    <span className={rule.passed ? 'text-emerald-600' : 'text-slate-400'}>
+                      {rule.label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 Yeni Şifre (Tekrar)
               </label>
               <input
                 type="password"
-                minLength={6}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
                 placeholder="Şifrenizi tekrar girin"
               />
+              {confirmPassword.length > 0 && !passwordsMatch && (
+                <p className="mt-1.5 text-xs text-red-500">Şifreler eşleşmiyor</p>
+              )}
             </div>
             {passwordMessage && (
-              <p className="text-sm text-slate-600">{passwordMessage}</p>
+              <p className={`text-sm ${getMessageClassName(passwordMessage)}`}>{passwordMessage}</p>
             )}
             <button
               type="submit"
-              disabled={passwordSaving}
+              disabled={passwordSaving || !allRulesPassed || !passwordsMatch}
               className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
             >
               {passwordSaving ? (
@@ -450,7 +479,7 @@ export default function ProfilePage() {
               )}
             </div>
             {companyMessage && (
-              <p className="text-sm text-slate-600">{companyMessage}</p>
+              <p className={`text-sm ${getMessageClassName(companyMessage)}`}>{companyMessage}</p>
             )}
           </form>
         )}
@@ -464,4 +493,14 @@ function extractStoragePath(url: string | null): string | null {
   if (!url) return null
   const match = url.match(/project-images\/(.+)$/)
   return match ? match[1] : null
+}
+
+function getMessageClassName(message: string | null): string {
+  if (!message) return 'text-slate-600'
+  const normalized = message.toLowerCase('tr-TR')
+  const successHints = ['başarıyla', 'güncellendi', 'döndürüldü']
+  if (successHints.some((hint) => normalized.includes(hint))) {
+    return 'text-emerald-600'
+  }
+  return 'text-red-500'
 }
