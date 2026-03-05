@@ -69,7 +69,12 @@ export default function Layout() {
             <div className="min-w-0 flex-1">
               <p
                 className="mt-1 overflow-hidden text-lg font-semibold leading-5 text-slate-100"
-                style={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' }}
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 4,
+                  WebkitBoxOrient: 'vertical',
+                  fontFamily: '"Trebuchet MS", "Verdana", "DejaVu Sans", "Noto Sans", sans-serif',
+                }}
                 title={sidebarCompanyName}
               >
                 {sidebarCompanyName}

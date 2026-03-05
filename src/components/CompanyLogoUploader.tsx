@@ -7,6 +7,7 @@ interface CompanyLogoUploaderProps {
   logoUrl: string
   uploading: boolean
   message?: string | null
+  messageClassName?: string
   onUpload: (blob: Blob) => Promise<void>
   onReset?: () => Promise<void>
   showResetButton?: boolean
@@ -16,6 +17,7 @@ export default function CompanyLogoUploader({
   logoUrl,
   uploading,
   message,
+  messageClassName = 'text-slate-500',
   onUpload,
   onReset,
   showResetButton = false,
@@ -67,7 +69,7 @@ export default function CompanyLogoUploader({
               Varsayılan Logoya Dön
             </button>
           )}
-          {message && <p className="text-xs text-slate-500">{message}</p>}
+          {message && <p className={`text-xs ${messageClassName}`}>{message}</p>}
         </div>
       </div>
 
