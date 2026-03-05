@@ -58,11 +58,12 @@ export default function Layout() {
                 <img
                   src={sidebarLogoUrl}
                   alt="Firma logosu"
-                  className="h-full w-full object-contain"
+                  draggable={false}
+                  className="h-full w-full select-none object-contain"
                 />
               </div>
             ) : (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-500 text-xs font-medium tracking-tight text-slate-300">
+              <div className="flex h-12 w-12 shrink-0 select-none items-center justify-center rounded-xl border border-dashed border-slate-500 text-xs font-medium tracking-tight text-slate-300">
                 Logo
               </div>
             )}

@@ -297,6 +297,7 @@ export default function ProfilePage() {
           onUpload={handleAvatarUpload}
           onReset={handleAvatarReset}
           showResetButton
+          enablePreviewOnDoubleClick
         />
       </div>
 
@@ -497,7 +498,7 @@ function extractStoragePath(url: string | null): string | null {
 
 function getMessageClassName(message: string | null): string {
   if (!message) return 'text-slate-600'
-  const normalized = message.toLowerCase('tr-TR')
+  const normalized = message.toLocaleLowerCase('tr-TR')
   const successHints = ['başarıyla', 'güncellendi', 'döndürüldü']
   if (successHints.some((hint) => normalized.includes(hint))) {
     return 'text-emerald-600'
