@@ -12,7 +12,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/', label: 'Panel', icon: LayoutDashboard },
   { to: '/projects', label: 'Projeler', icon: FolderKanban },
 ]
 

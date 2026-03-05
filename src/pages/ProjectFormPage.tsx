@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useForm } from 'react-hook-form'
 import { ArrowLeft, Loader2, Save } from 'lucide-react'
 
+import ProjectLocationPicker from '@/components/ProjectLocationPicker'
 import { supabase } from '@/lib/supabase'
 import ImageUploader from '@/components/ImageUploader'
-import type { ProjectInsert } from '@/types/project'
+import type { ProjectInsert, ProjectLocation } from '@/types/project'
 
 type FormData = Omit<ProjectInsert, 'images' | 'cover_image'>
 
@@ -15,15 +16,25 @@ export default function ProjectFormPage() {
   const isEditing = Boolean(id)
 
   const [images, setImages] = useState<string[]>([])
+  const [location, setLocation] = useState<ProjectLocation | null>(null)
+  const [locationErrors, setLocationErrors] = useState<{
+    city?: string
+    district?: string
+  }>({})
   const [saving, setSaving] = useState(false)
   const [loadingProject, setLoadingProject] = useState(isEditing)
+  const cityInputRef = useRef<HTMLInputElement>(null)
+  const districtInputRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
     handleSubmit,
     setValue,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<FormData>({
+    shouldFocusError: true,
     defaultValues: {
       title: '',
       slug: '',
@@ -53,6 +64,7 @@ export default function ProjectFormPage() {
         setValue('category', data.category ?? '')
         setValue('status', data.status)
         setValue('featured', Boolean(data.featured))
+        setLocation(normalizeLoadedLocation(data.location))
         const loadedImages = Array.isArray(data.images)
           ? data.images.filter((img: unknown): img is string => typeof img === 'string')
           : []
@@ -69,6 +81,24 @@ export default function ProjectFormPage() {
     loadProject()
   }, [id, setValue])
 
+  useEffect(() => {
+    const nextErrors: { city?: string; district?: string } = { ...locationErrors }
+    let changed = false
+
+    if (locationErrors.city && (location?.city?.trim() ?? '').length > 0) {
+      delete nextErrors.city
+      changed = true
+    }
+    if (locationErrors.district && (location?.district?.trim() ?? '').length > 0) {
+      delete nextErrors.district
+      changed = true
+    }
+
+    if (changed) {
+      setLocationErrors(nextErrors)
+    }
+  }, [location?.city, location?.district, locationErrors])
+
   const generateSlug = (title: string) => {
     return title
       .toLowerCase()
@@ -83,12 +113,57 @@ export default function ProjectFormPage() {
   }
 
   const onSubmit = async (data: FormData) => {
+    const normalizedCity = location?.city?.trim() ?? ''
+    const normalizedDistrict = location?.district?.trim() ?? ''
+    const nextLocationErrors: { city?: string; district?: string } = {}
+
+    if (!normalizedCity) {
+      nextLocationErrors.city = 'İl zorunludur'
+    }
+    if (!normalizedDistrict) {
+      nextLocationErrors.district = 'İlçe zorunludur'
+    }
+
+    if (nextLocationErrors.city || nextLocationErrors.district) {
+      setLocationErrors(nextLocationErrors)
+      if (nextLocationErrors.city) {
+        cityInputRef.current?.focus()
+      } else {
+        districtInputRef.current?.focus()
+      }
+      return
+    }
+
+    setLocationErrors({})
+
+    const normalizedTitle = data.title.trim()
+    const { data: existingProjects, error: titleCheckError } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('title', normalizedTitle)
+      .limit(1)
+
+    if (!titleCheckError && existingProjects && existingProjects.length > 0) {
+      const duplicateProject = existingProjects[0]
+      if (!isEditing || duplicateProject.id !== id) {
+        setError('title', {
+          type: 'manual',
+          message: 'Bu isimde proje mevcuttur',
+        }, {
+          shouldFocus: true,
+        })
+        return
+      }
+    }
+
     setSaving(true)
 
     const payload = {
       ...data,
+      title: normalizedTitle,
       cover_image: images[0] ?? null,
       images,
+      location: normalizeLocationForSave(location),
     }
 
     if (isEditing) {
@@ -143,6 +218,7 @@ export default function ProjectFormPage() {
               <input
                 {...register('title', { required: 'Başlık zorunludur' })}
                 onChange={(e) => {
+                  clearErrors('title')
                   register('title').onChange(e)
                   if (!isEditing) {
                     setValue('slug', generateSlug(e.target.value))
@@ -156,22 +232,24 @@ export default function ProjectFormPage() {
               )}
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Slug *
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-400">/projeler/</span>
-                <input
-                  {...register('slug', { required: 'Slug zorunludur' })}
-                  className="flex-1 rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
-                  placeholder="proje-slug"
-                />
+            <details className="rounded-lg border border-slate-300 bg-white px-4 py-3">
+              <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                Slug
+              </summary>
+              <div className="mt-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-400">/projeler/</span>
+                  <input
+                    {...register('slug', { required: 'Slug zorunludur' })}
+                    className="flex-1 rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                    placeholder="proje-slug"
+                  />
+                </div>
+                {errors.slug && (
+                  <p className="mt-1 text-xs text-red-500">{errors.slug.message}</p>
+                )}
               </div>
-              {errors.slug && (
-                <p className="mt-1 text-xs text-red-500">{errors.slug.message}</p>
-              )}
-            </div>
+            </details>
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -199,13 +277,16 @@ export default function ProjectFormPage() {
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Kategori
+                Kategori *
               </label>
               <input
-                {...register('category')}
+                {...register('category', { required: 'Kategori zorunludur' })}
                 className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
                 placeholder="ör: Konut, Ticari, Altyapı"
               />
+              {errors.category && (
+                <p className="mt-1 text-xs text-red-500">{errors.category.message}</p>
+              )}
             </div>
           </div>
         </div>
@@ -215,6 +296,20 @@ export default function ProjectFormPage() {
             Proje Görselleri
           </h3>
           <ImageUploader values={images} onChange={setImages} />
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
+            Proje Lokasyonu
+          </h3>
+          <ProjectLocationPicker
+            value={location}
+            onChange={setLocation}
+            cityError={locationErrors.city}
+            districtError={locationErrors.district}
+            cityInputRef={cityInputRef}
+            districtInputRef={districtInputRef}
+          />
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -269,4 +364,37 @@ export default function ProjectFormPage() {
       </form>
     </div>
   )
+}
+
+function normalizeLoadedLocation(value: unknown): ProjectLocation | null {
+  if (!value || typeof value !== 'object') return null
+
+  const raw = value as Record<string, unknown>
+  return {
+    city: typeof raw.city === 'string' ? raw.city : null,
+    district: typeof raw.district === 'string' ? raw.district : null,
+    address: typeof raw.address === 'string' ? raw.address : null,
+    latitude: typeof raw.latitude === 'number' ? raw.latitude : null,
+    longitude: typeof raw.longitude === 'number' ? raw.longitude : null,
+  }
+}
+
+function normalizeLocationForSave(
+  value: ProjectLocation | null
+): ProjectLocation | null {
+  if (!value) return null
+
+  const normalized: ProjectLocation = {
+    city: value.city?.trim() || null,
+    district: value.district?.trim() || null,
+    address: value.address?.trim() || null,
+    latitude: typeof value.latitude === 'number' ? value.latitude : null,
+    longitude: typeof value.longitude === 'number' ? value.longitude : null,
+  }
+
+  const hasAnyValue = Object.values(normalized).some(
+    (entry) => entry !== null && entry !== ''
+  )
+
+  return hasAnyValue ? normalized : null
 }
