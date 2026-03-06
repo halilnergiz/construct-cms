@@ -57,7 +57,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
+          <h2 className="text-2xl font-bold text-slate-900">Panel</h2>
           <p className="mt-1 text-sm text-slate-500">Projelerin genel durumu</p>
         </div>
         <Link

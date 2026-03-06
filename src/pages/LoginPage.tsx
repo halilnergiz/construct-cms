@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router'
-import { FolderKanban, Loader2, ArrowLeft, Mail } from 'lucide-react'
+import { ShieldCheck, Loader2, ArrowLeft, Mail } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -71,9 +71,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-2">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900">
-            <FolderKanban className="h-7 w-7 text-sky-400" />
+            <ShieldCheck className="h-7 w-7 text-sky-400" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Construct CMS</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Yönetim Paneli</h1>
           <p className="text-sm text-slate-500">
             {mode === 'login' ? 'Admin paneline giriş yapın' : 'Şifrenizi sıfırlayın'}
           </p>
