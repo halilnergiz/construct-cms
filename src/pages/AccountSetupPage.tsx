@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { FolderKanban, Loader2, KeyRound, Check, X } from 'lucide-react';
 
-import CompanyLogoUploader from '@/components/CompanyLogoUploader';
+import { CompanyLogoUploader } from '@/components';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 

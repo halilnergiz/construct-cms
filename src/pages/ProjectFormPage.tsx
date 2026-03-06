@@ -3,9 +3,8 @@ import { useNavigate, useParams } from 'react-router'
 import { useForm } from 'react-hook-form'
 import { ArrowLeft, Loader2, Save } from 'lucide-react'
 
-import ProjectLocationPicker from '@/components/ProjectLocationPicker'
+import { ProjectLocationPicker, ImageUploader } from '@/components'
 import { supabase } from '@/lib/supabase'
-import ImageUploader from '@/components/ImageUploader'
 import type { ProjectInsert, ProjectLocation } from '@/types/project'
 
 type FormData = Omit<ProjectInsert, 'images' | 'cover_image'>

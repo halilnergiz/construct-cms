@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Check, KeyRound, Loader2, Pencil, ShieldCheck, UserCircle2, X } from 'lucide-react'
 
-import CompanyLogoUploader from '@/components/CompanyLogoUploader'
+import { CompanyLogoUploader } from '@/components'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 
