@@ -53,6 +53,7 @@ export default function ProjectLocationPicker({
   const [results, setResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [searchWarning, setSearchWarning] = useState<string | null>(null)
 
   const hasCoordinates =
     typeof value?.latitude === 'number' && typeof value?.longitude === 'number'
@@ -86,12 +87,14 @@ export default function ProjectLocationPicker({
     const trimmed = query.trim()
     if (!trimmed) {
       setResults([])
+      setSearchWarning(null)
       setSearchError('Lütfen arama için bir değer girin.')
       return
     }
 
     setSearching(true)
     setSearchError(null)
+    setSearchWarning(null)
 
     try {
       const response = await fetch(
@@ -108,8 +111,14 @@ export default function ProjectLocationPicker({
       }
 
       const data = (await response.json()) as SearchResult[]
+      if (data.length === 0) {
+        setResults([])
+        setSearchWarning('Arama sonucu bulunamadı.\n Lütfen farklı bir konum deneyin veya haritada üzerinden seçin.')
+        return
+      }
       setResults(data.map((item) => ({ ...item, source: 'search' as const })))
     } catch (error) {
+      setSearchWarning(null)
       setSearchError(
         error instanceof Error
           ? error.message
@@ -183,7 +192,12 @@ export default function ProjectLocationPicker({
       <div className="grid gap-3 md:grid-cols-[1fr_auto]">
         <input
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value)
+            if (searchWarning) {
+              setSearchWarning(null)
+            }
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault()
@@ -205,6 +219,7 @@ export default function ProjectLocationPicker({
       </div>
 
       {searchError && <p className="text-xs text-red-500">{searchError}</p>}
+      {searchWarning && <p className="text-xs text-amber-600">{searchWarning}</p>}
 
       {results.length > 0 && (
         <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white">
