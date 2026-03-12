@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { Plus, Pencil, Trash2, Eye, EyeOff, ScanEye } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
-import type { Project } from '@/types/project';
+import type { Project, ProjectStatus } from '@/types/project';
 
 type FilterStatus = 'all' | 'published' | 'draft';
 
@@ -23,7 +23,7 @@ export default function ProjectsPage() {
         .order('created_at', { ascending: false });
 
       if (filter !== 'all') {
-        query = query.eq('status', filter);
+        query = query.eq('publication_state', filter);
       }
 
       const { data, error } = await query;
@@ -133,7 +133,8 @@ export default function ProjectsPage() {
               <tr className='border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wider text-slate-500'>
                 <th className='px-6 py-3'>Proje</th>
                 <th className='hidden px-6 py-3 sm:table-cell'>Kategori</th>
-                <th className='px-6 py-3'>Durum</th>
+                <th className='hidden px-6 py-3 md:table-cell'>Proje Durumu</th>
+                <th className='px-6 py-3'>Yayın Durumu</th>
                 <th className='px-6 py-3 text-right'>İşlemler</th>
               </tr>
             </thead>
@@ -166,19 +167,22 @@ export default function ProjectsPage() {
                   <td className='hidden px-6 py-4 text-sm text-slate-600 sm:table-cell'>
                     {project.category ?? '—'}
                   </td>
+                  <td className='hidden px-6 py-4 text-sm text-slate-600 md:table-cell'>
+                    {formatProjectStatus(project.project_status)}
+                  </td>
                   <td className='px-6 py-4'>
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${project.status === 'published'
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${project.publication_state === 'published'
                           ? 'bg-emerald-50 text-emerald-700'
                           : 'bg-amber-50 text-amber-700'
                         }`}
                     >
-                      {project.status === 'published' ? (
+                      {project.publication_state === 'published' ? (
                         <Eye className='h-3 w-3' />
                       ) : (
                         <EyeOff className='h-3 w-3' />
                       )}
-                      {project.status === 'published' ? 'Yayında' : 'Taslak'}
+                      {project.publication_state === 'published' ? 'Yayında' : 'Taslak'}
                     </span>
                   </td>
                   <td className='px-6 py-4'>
@@ -220,4 +224,11 @@ export default function ProjectsPage() {
 function extractStoragePath(url: string): string | null {
   const match = url.match(/project-images\/(.+)$/);
   return match ? match[1] : null;
+}
+
+function formatProjectStatus(value: ProjectStatus | null): string {
+  if (value === 'planned') return 'Planlanan';
+  if (value === 'ongoing') return 'Devam Eden';
+  if (value === 'completed') return 'Tamamlanmış';
+  return '—';
 }

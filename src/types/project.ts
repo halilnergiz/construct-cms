@@ -6,6 +6,8 @@ export interface ProjectLocation {
   longitude: number | null
 }
 
+export type ProjectStatus = 'planned' | 'ongoing' | 'completed'
+
 export interface Project {
   id: string
   title: string
@@ -15,8 +17,9 @@ export interface Project {
   cover_image: string | null
   images: string[]
   category: string | null
+  project_status: ProjectStatus | null
   location?: ProjectLocation | null
-  status: 'draft' | 'published'
+  publication_state: 'draft' | 'published'
   featured: boolean
   created_at: string
   updated_at: string

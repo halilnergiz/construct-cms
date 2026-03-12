@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router'
 import { ArrowLeft, Pencil, Eye, EyeOff, Trash2, MapPin, X } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
-import type { Project } from '@/types/project'
+import type { Project, ProjectStatus } from '@/types/project'
 
 export default function ProjectPreviewPage() {
   const { id } = useParams()
@@ -153,28 +153,23 @@ export default function ProjectPreviewPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Önizleme</h2>
-            <p className="mt-0.5 text-sm text-slate-500">
-              Projenin website&apos;taki görünümü
-            </p>
-          </div>
+          <h2 className="text-2xl font-bold text-slate-900">Önizleme</h2>
         </div>
 
         <div className="flex items-center gap-2 self-start">
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-              project.status === 'published'
+              project.publication_state === 'published'
                 ? 'bg-emerald-50 text-emerald-700'
                 : 'bg-amber-50 text-amber-700'
             }`}
           >
-            {project.status === 'published' ? (
+            {project.publication_state === 'published' ? (
               <Eye className="h-3 w-3" />
             ) : (
               <EyeOff className="h-3 w-3" />
             )}
-            {project.status === 'published' ? 'Yayında' : 'Taslak'}
+            {project.publication_state === 'published' ? 'Yayında' : 'Taslak'}
           </span>
           <Link
             to={`/projects/${project.id}/edit`}
@@ -220,18 +215,18 @@ export default function ProjectPreviewPage() {
               >
                 {project.featured ? 'Öne Çıkan' : 'Standart'}
               </span>
-              <div className="absolute inset-x-4 bottom-4 flex flex-wrap items-end justify-between gap-3">
+              <div className="absolute inset-x-3 bottom-3 flex flex-wrap items-end justify-between gap-2 sm:inset-x-4 sm:bottom-4 sm:gap-3">
                 <div>
-                  <h1 className="text-3xl font-semibold text-white drop-shadow-sm">
+                  <h1 className="text-xl font-semibold text-white drop-shadow-sm sm:text-2xl md:text-3xl">
                     {project.title}
                   </h1>
-                  <p className="mt-1 flex items-center gap-2 text-sm text-slate-100">
-                    <MapPin className="h-4 w-4" />
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-100 sm:gap-2 sm:text-sm">
+                    <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     {formatLocation(project)}
                   </p>
                 </div>
                 {project.category && (
-                  <span className="rounded-full bg-slate-100/95 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
+                  <span className="rounded-full bg-slate-100/95 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 sm:px-3 sm:py-1 sm:text-xs">
                     {project.category}
                   </span>
                 )}
@@ -284,45 +279,40 @@ export default function ProjectPreviewPage() {
           </section>
 
           <aside className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="space-y-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    {project.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {project.description ?? 'Açıklama eklenmemiş.'}
-                  </p>
-                </div>
-                <div className="border-t border-slate-200 pt-3">
-                  {project.content ? (
-                    <div className="max-h-[230px] space-y-2 overflow-y-auto pr-1 text-sm text-slate-600">
-                      {project.content.split('\n').map((line, i) =>
-                        line.trim() ? <p key={i}>{line}</p> : <div key={i} className="h-2" />
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-500">İçerik eklenmemiş.</p>
-                  )}
-                </div>
+            <div className="h-[320px] max-h-[320px] space-y-3 md:h-[380px] md:max-h-[380px]">
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {mapUrl ? (
+                  <iframe
+                    title="project-location-map"
+                    src={mapUrl}
+                    className="h-32 w-full md:h-48"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                ) : (
+                  <div className="flex h-32 items-center justify-center p-4 text-sm text-slate-500 md:h-48">
+                    Harita için konum koordinatı bulunmuyor
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-3">
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                  {mapUrl ? (
-                    <iframe
-                      title="project-location-map"
-                      src={mapUrl}
-                      className="h-48 w-full"
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                    />
-                  ) : (
-                    <div className="flex h-48 items-center justify-center p-4 text-sm text-slate-500">
-                      Harita için konum koordinatı bulunmuyor
-                    </div>
-                  )}
-                </div>
+              <div className="h-[calc(320px-12px-8rem)] overflow-y-auto pr-1 text-sm text-slate-600 md:h-[calc(380px-12px-12rem)] lg:h-[calc(380px-12px-10rem)] 2xl:h-[calc(480px-12px-3rem)]">
+                <h3 className="text-lg font-semibold text-slate-900">{project.title}</h3>
+                <p className="mt-1">
+                  {project.description ?? 'Açıklama eklenmemiş.'}
+                </p>
+
+                {project.content ? (
+                  <div className="mt-3 border-t border-slate-200 pt-3 space-y-2">
+                    {project.content.split('\n').map((line, i) =>
+                      line.trim() ? <p key={i}>{line}</p> : <div key={i} className="h-2" />
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-3 border-t border-slate-200 pt-3 text-slate-500">
+                    İçerik eklenmemiş.
+                  </p>
+                )}
               </div>
             </div>
           </aside>
@@ -337,6 +327,12 @@ export default function ProjectPreviewPage() {
           <div>
             <dt className="text-slate-500">Slug</dt>
             <dd className="font-medium text-slate-900">/{project.slug}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Proje Durumu</dt>
+            <dd className="font-medium text-slate-900">
+              {formatProjectStatus(project.project_status)}
+            </dd>
           </div>
           <div>
             <dt className="text-slate-500">Oluşturulma</dt>
@@ -404,4 +400,11 @@ function formatLocation(project: Project): string {
 function extractStoragePath(url: string): string | null {
   const match = url.match(/project-images\/(.+)$/)
   return match ? match[1] : null
+}
+
+function formatProjectStatus(value: ProjectStatus | null): string {
+  if (value === 'planned') return 'Planlanan'
+  if (value === 'ongoing') return 'Devam Eden'
+  if (value === 'completed') return 'Tamamlanmış'
+  return 'Belirtilmemiş'
 }

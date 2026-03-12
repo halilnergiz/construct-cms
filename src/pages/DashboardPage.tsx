@@ -18,13 +18,13 @@ export default function DashboardPage() {
     async function fetchStats() {
       const { data, error } = await supabase
         .from('projects')
-        .select('status')
+        .select('publication_state')
 
       if (!error && data) {
         setStats({
           total: data.length,
-          published: data.filter((p) => p.status === 'published').length,
-          draft: data.filter((p) => p.status === 'draft').length,
+          published: data.filter((p) => p.publication_state === 'published').length,
+          draft: data.filter((p) => p.publication_state === 'draft').length,
         })
       }
       setLoading(false)

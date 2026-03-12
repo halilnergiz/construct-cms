@@ -5,7 +5,7 @@ import { ArrowLeft, Loader2, Save } from 'lucide-react'
 
 import { ProjectLocationPicker, ImageUploader } from '@/components'
 import { supabase } from '@/lib/supabase'
-import type { ProjectInsert, ProjectLocation } from '@/types/project'
+import type { ProjectInsert, ProjectLocation, ProjectStatus } from '@/types/project'
 
 type FormData = Omit<ProjectInsert, 'images' | 'cover_image'>
 
@@ -40,7 +40,8 @@ export default function ProjectFormPage() {
       description: '',
       content: '',
       category: '',
-      status: 'draft',
+      project_status: 'planned',
+      publication_state: 'draft',
       featured: false,
     },
   })
@@ -61,7 +62,8 @@ export default function ProjectFormPage() {
         setValue('description', data.description ?? '')
         setValue('content', data.content ?? '')
         setValue('category', data.category ?? '')
-        setValue('status', data.status)
+        setValue('project_status', normalizeProjectStatus(data.project_status))
+        setValue('publication_state', data.publication_state)
         setValue('featured', Boolean(data.featured))
         setLocation(normalizeLoadedLocation(data.location))
         const loadedImages = Array.isArray(data.images)
@@ -287,6 +289,24 @@ export default function ProjectFormPage() {
                 <p className="mt-1 text-xs text-red-500">{errors.category.message}</p>
               )}
             </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                Proje Durumu *
+              </label>
+              <select
+                {...register('project_status', { required: 'Proje durumu zorunludur' })}
+                className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+              >
+                <option value="planned">Planlanan</option>
+                <option value="ongoing">Devam Eden</option>
+                <option value="completed">Tamamlanmış</option>
+              </select>
+              {errors.project_status && (
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.project_status.message}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -321,7 +341,7 @@ export default function ProjectFormPage() {
                 Durum
               </label>
               <select
-                {...register('status')}
+                {...register('publication_state')}
                 className="rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-colors focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
               >
                 <option value="draft">Taslak</option>
@@ -396,4 +416,11 @@ function normalizeLocationForSave(
   )
 
   return hasAnyValue ? normalized : null
+}
+
+function normalizeProjectStatus(value: unknown): ProjectStatus {
+  if (value === 'planned' || value === 'ongoing' || value === 'completed') {
+    return value
+  }
+  return 'planned'
 }
